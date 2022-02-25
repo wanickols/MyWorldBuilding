@@ -71,7 +71,9 @@ Intermediate/*
 Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
-DerivedDataCache/*
 
-#Partial Uploading Init
-*.uasset
+DerivedDataCache/*
+startercontent/
+GT_Free2020/
+TrueSky/
+Textures/
