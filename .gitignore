@@ -72,6 +72,9 @@ Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
 
-
+/content/GrassLandscape/PN_GrassLibrary/Textures
+/content/GrassLandscape/PN_GrassLibrary/Meshes
+/content/GrassLandscape/PN_GrassLibrary/Materials
+/content/GrassLandscape/PN_GrassLibrary/Blueprints
 
 
