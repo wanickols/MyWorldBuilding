@@ -73,8 +73,12 @@ Plugins/*/Intermediate/*
 # Cache files for the editor to use
 
 Content/CityofBrass_Enemies
-Content/STF/Pack03-LandscapePro
+Content/STF/Pack03-LandscapePro/base
+Content/STF/Pack03-LandscapePro/maps
+Content/STF/Pack03-LandscapePro/Environment/Foliage
 
-Content/GrassLandscape/PN_GrassLibrary/FoliageTypes
+
+
+
 
 
