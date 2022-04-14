@@ -8,12 +8,16 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include <../public/Interactable/InteractableInterface.h>
+#include <DrawDebugHelpers.h>
 
 //////////////////////////////////////////////////////////////////////////
 // ATP_ThirdPersonCharacter
 
 ATP_ThirdPersonCharacter::ATP_ThirdPersonCharacter()
 {
+	PrimaryActorTick.bCanEverTick = true;
+
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
@@ -47,6 +51,12 @@ ATP_ThirdPersonCharacter::ATP_ThirdPersonCharacter()
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 }
 
+void ATP_ThirdPersonCharacter::Tick(float Deltaime)
+{
+	//Checks to see what is infront of you every tick
+	TraceForward();
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Input
 
@@ -57,8 +67,13 @@ void ATP_ThirdPersonCharacter::SetupPlayerInputComponent(class UInputComponent* 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
+	//Interact
+	PlayerInputComponent->BindAction("Interact", IE_Released, this, &ATP_ThirdPersonCharacter::InteractPressed);
+	
+
 	PlayerInputComponent->BindAxis("MoveForward", this, &ATP_ThirdPersonCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ATP_ThirdPersonCharacter::MoveRight);
+	
 
 	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
 	// "turn" handles devices that provide an absolute delta, such as a mouse.
@@ -74,6 +89,106 @@ void ATP_ThirdPersonCharacter::SetupPlayerInputComponent(class UInputComponent* 
 
 	// VR headset functionality
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &ATP_ThirdPersonCharacter::OnResetVR);
+}
+
+void ATP_ThirdPersonCharacter::InteractPressed()
+{
+	TraceForward();
+	if (FocusedActor) {
+		IInteractableInterface* Interface = Cast<IInteractableInterface>(FocusedActor);
+		if (Interface)
+		{
+			Interface->Execute_OnInteract(FocusedActor, this);
+		}
+	}
+}
+
+void ATP_ThirdPersonCharacter::TraceForward_Implementation()
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+
+	FVector LookDir = FVector::ZeroVector;
+	FVector StartTrace = FVector::ZeroVector;
+
+	if (PlayerController)
+	{
+		// Calculate the direction of player and the start location for trace
+		FRotator CamRot;
+		PlayerController->GetPlayerViewPoint(StartTrace, CamRot);
+		LookDir = CamRot.Vector();
+
+		// Adjust trace so there is nothing blocking the ray between the camera and the pawn, and calculate distance from adjusted start
+		StartTrace = StartTrace + LookDir * ((GetActorLocation() - StartTrace) | LookDir);
+	}
+
+	// Calculate endpoint of trace
+	const FVector EndTrace = StartTrace + LookDir * InteractReach;
+
+	// Perform trace to retrieve hit info
+	FCollisionQueryParams TraceParams(SCENE_QUERY_STAT(WeaponTrace), true, GetInstigator());
+	TraceParams.bReturnPhysicalMaterial = true;
+
+	FHitResult Hit(ForceInit);
+	GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, ECC_Visibility, TraceParams);
+
+	// Check for impact
+	const FHitResult Impact = Hit;
+
+	// Deal with impact
+	AActor* InteractableActor = Impact.GetActor();
+
+	
+
+	// If we hit an actor, with a component that is simulating physics, apply an impulse
+	if ((InteractableActor != nullptr) && (InteractableActor != this))
+	{
+		
+		//DrawDebugLine(GetWorld(), StartTrace, EndTrace, FColor::Green, false, 2.f, 0, 0.2f);
+		//DrawDebugBox(GetWorld(), Impact.Location, FVector(5.f, 5.f, 5.f), FColor::Emerald, false, 2.f);
+
+
+		if (FocusedActor)
+		{
+			if (InteractableActor != FocusedActor)
+			{
+
+
+				IInteractableInterface* Interface = Cast<IInteractableInterface>(FocusedActor);
+				if (Interface)
+				{
+
+					Interface->Execute_EndFocus(FocusedActor);
+					FocusedActor = nullptr;
+				}
+
+
+			}
+		}
+		FocusedActor = InteractableActor;
+
+		IInteractableInterface* Interface = Cast<IInteractableInterface>(FocusedActor);
+		if (Interface)
+		{
+			Interface->Execute_StartFocus(FocusedActor);
+
+		}
+
+	}
+	else
+	{
+	
+		if (FocusedActor) {
+			IInteractableInterface* Interface = Cast<IInteractableInterface>(FocusedActor);
+			if (Interface)
+			{
+				Interface->Execute_EndFocus(FocusedActor);
+
+			}
+			FocusedActor = nullptr;
+
+		}
+	}
+
 }
 
 
